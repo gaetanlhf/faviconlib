@@ -1,10 +1,12 @@
 <?php
+
 /**
  * (c) Joffrey Demetz <joffrey.demetz@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
 namespace JDZ\Favicon;
 
 use JDZ\Favicon\Exception\ConfigException;
@@ -12,7 +14,8 @@ use JDZ\Favicon\Exception\ConfigException;
 /**
  * Generator config
  * 
- * @author Joffrey Demetz <joffrey.demetz@gmail.com> */
+ * @author Joffrey Demetz <joffrey.demetz@gmail.com>
+ */
 class Config
 {
   /**
@@ -45,7 +48,7 @@ class Config
     'apple-touch-icon-152x152.png' => 152,
     'apple-touch-icon-180x180.png' => 180,
   ];
-  
+
   /**
    * Tile settings
    *
@@ -90,33 +93,33 @@ class Config
    * @param   bool    $noMs         Exclude images for Windows and IE11 
    * @return  array
    */
-  public static function getSizes($noOldApple=false, $noAndroid=false, $noMs=false)
+  public static function getSizes($noOldApple = false, $noAndroid = false, $noMs = false)
   {
     $result = array_merge(self::$sizes, []);
-    
-    if ( $noOldApple === true ){
+
+    if ($noOldApple === true) {
       unset($result['apple-touch-icon-57x57.png']);
       unset($result['apple-touch-icon-60x60.png']);
       unset($result['apple-touch-icon-72x72.png']);
       unset($result['apple-touch-icon-114x114.png']);
     }
-    
-    if ( $noAndroid === true ){
+
+    if ($noAndroid === true) {
       unset($result['android-chrome-36x36.png']);
       unset($result['android-chrome-48x48.png']);
       unset($result['android-chrome-72x72.png']);
       unset($result['android-chrome-96x96.png']);
       unset($result['android-chrome-144x144.png']);
     }
-    
-    if ( $noMs === true ){
+
+    if ($noMs === true) {
       unset($result['mstile-70x70.png']);
       unset($result['mstile-144x144.png']);
       unset($result['mstile-150x150.png']);
       unset($result['mstile-310x310.png']);
       unset($result['mstile-310x150.png']);
     }
-    
+
     return $result;
   }
 
@@ -129,10 +132,10 @@ class Config
    */
   public static function getTileSettings($name)
   {
-    if ( !isset(self::$tileSettings[$name]) ){
+    if (!isset(self::$tileSettings[$name])) {
       throw new ConfigException('Invalid image name');
     }
-    
+
     return self::$tileSettings[$name];
   }
 }
