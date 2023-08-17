@@ -1,10 +1,12 @@
 <?php
+
 /**
  * (c) Joffrey Demetz <joffrey.demetz@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
 namespace JDZ\Favicon;
 
 use Exception;
@@ -14,7 +16,7 @@ use Exception;
  * 
  * @author Joffrey Demetz <joffrey.demetz@gmail.com>
  */
-class Ico 
+class Ico
 {
   /**
    * Images in the BMP format.
@@ -29,7 +31,7 @@ class Ico
    * @var boolean
    */
   protected $valid;
-  
+
   /**
    * Check the dependencies
    * 
@@ -51,14 +53,14 @@ class Ico
       'imagesy',
       'imagecopyresampled',
     ];
-    
-    foreach($required_functions as $function){
-      if ( !function_exists($function) ){
+
+    foreach ($required_functions as $function) {
+      if (!function_exists($function)) {
         throw new Exception('$function function does not exist, which is part of the GD library.');
       }
     }
   }
-  
+
   /**
    * Constructor - Create a new ICO generator.
    * 
@@ -70,18 +72,18 @@ class Ico
    *                              If sizes are not supplied, the size of the source image will be used.
    * @throws  GeneratorException
    */
-  public function __construct($file=false, array $sizes=[])
+  public function __construct($file = false, array $sizes = [])
   {
     $this->images = [];
     $this->valid  = false;
-    
+
     $this->valid = true;
-    
-    if ( false !== $file ){
+
+    if (false !== $file) {
       $this->add($file, $sizes);
     }
   }
-  
+
   /**
    * Add an image to the generator.
    *
@@ -95,47 +97,47 @@ class Ico
    *                              If sizes are not supplied, the size of the source image will be used.
    * @return  boolean   True on success
    */
-  public function add($file, array $sizes=[])
+  public function add($file, array $sizes = [])
   {
-    if ( $this->valid === false ){
+    if ($this->valid === false) {
       return false;
     }
 
-    if ( false === ($im=$this->load_image_file($file)) ){
+    if (false === ($im = $this->load_image_file($file))) {
       return false;
     }
 
-    if ( empty($sizes) ){
-      $sizes = [ imagesx( $im ), imagesy( $im ) ];
+    if (empty($sizes)) {
+      $sizes = [imagesx($im), imagesy($im)];
     }
-    
+
     // If just a single size was passed, put it in array.
-    if ( !is_array($sizes[0]) ){
-      $sizes = [ $sizes ];
+    if (!is_array($sizes[0])) {
+      $sizes = [$sizes];
     }
-    
-    foreach((array) $sizes as $size){
+
+    foreach ((array) $sizes as $size) {
       list($width, $height) = $size;
 
       $new_im = imagecreatetruecolor($width, $height);
 
-      imagecolortransparent($new_im, imagecolorallocatealpha( $new_im, 0, 0, 0, 127 ));
+      imagecolortransparent($new_im, imagecolorallocatealpha($new_im, 0, 0, 0, 127));
       imagealphablending($new_im, false);
       imagesavealpha($new_im, true);
 
       $source_width  = imagesx($im);
       $source_height = imagesy($im);
 
-      if ( false === imagecopyresampled($new_im, $im, 0, 0, 0, 0, $width, $height, $source_width, $source_height) ){
+      if (false === imagecopyresampled($new_im, $im, 0, 0, 0, 0, $width, $height, $source_width, $source_height)) {
         continue;
       }
-    
+
       $this->add_image_data($new_im);
     }
 
     return true;
   }
-  
+
   /**
    * Write the ICO file data to a file path.
    *
@@ -144,25 +146,25 @@ class Ico
    */
   public function save($file)
   {
-    if ( $this->valid === false ){
-      return false;
-    }
-    
-    if ( false === ($data=$this->_get_ico_data()) ){
+    if ($this->valid === false) {
       return false;
     }
 
-    if ( false === ($fh=fopen($file, 'w')) ){
+    if (false === ($data = $this->_get_ico_data())) {
       return false;
     }
 
-    if ( false === (fwrite($fh, $data)) ){
+    if (false === ($fh = fopen($file, 'w'))) {
+      return false;
+    }
+
+    if (false === (fwrite($fh, $data))) {
       fclose($fh);
       return false;
     }
-    
+
     fclose($fh);
-    
+
     return true;
   }
 
@@ -173,7 +175,7 @@ class Ico
    */
   protected function _get_ico_data()
   {
-    if ( !is_array($this->images) || empty($this->images) ){
+    if (!is_array($this->images) || empty($this->images)) {
       return false;
     }
 
@@ -182,18 +184,18 @@ class Ico
 
     $icon_dir_entry_size = 16;
 
-    $offset = 6 + ( $icon_dir_entry_size * count($this->images) );
+    $offset = 6 + ($icon_dir_entry_size * count($this->images));
 
-    foreach($this->images as $image){
+    foreach ($this->images as $image) {
       $data .= pack('CCCCvvVV', $image['width'], $image['height'], $image['color_palette_colors'], 0, 1, $image['bits_per_pixel'], $image['size'], $offset);
       $pixel_data .= $image['data'];
-      
+
       $offset += $image['size'];
     }
-    
+
     $data .= $pixel_data;
     unset($pixel_data);
-    
+
     return $data;
   }
 
@@ -207,36 +209,36 @@ class Ico
   {
     $width  = imagesx($im);
     $height = imagesy($im);
-    
+
     $pixel_data = [];
-    
+
     $opacity_data = [];
     $current_opacity_val = 0;
-    
-    for($y=$height-1; $y >= 0; $y--){
-      for($x=0; $x < $width; $x++){
+
+    for ($y = $height - 1; $y >= 0; $y--) {
+      for ($x = 0; $x < $width; $x++) {
         $color = imagecolorat($im, $x, $y);
 
-        $alpha = ( $color & 0x7F000000 ) >> 24;
-        $alpha = ( 1 - ( $alpha / 127 ) ) * 255;
+        $alpha = ($color & 0x7F000000) >> 24;
+        $alpha = (1 - ($alpha / 127)) * 255;
 
         $color &= 0xFFFFFF;
-        $color |= 0xFF000000 & ( $alpha << 24 );
+        $color |= 0xFF000000 & ($alpha << 24);
 
         $pixel_data[] = $color;
 
-        $opacity = ( $alpha <= 127 ) ? 1 : 0;
+        $opacity = ($alpha <= 127) ? 1 : 0;
 
-        $current_opacity_val = ( $current_opacity_val << 1 ) | $opacity;
+        $current_opacity_val = ($current_opacity_val << 1) | $opacity;
 
-        if ( (($x+1) % 32) == 0 ){
+        if ((($x + 1) % 32) == 0) {
           $opacity_data[] = $current_opacity_val;
           $current_opacity_val = 0;
         }
       }
 
-      if ( ($x % 32) > 0 ){
-        while (($x++ % 32) > 0){
+      if (($x % 32) > 0) {
+        while (($x++ % 32) > 0) {
           $current_opacity_val = $current_opacity_val << 1;
         }
 
@@ -247,18 +249,18 @@ class Ico
 
     $image_header_size = 40;
     $color_mask_size   = $width * $height * 4;
-    $opacity_mask_size = ( ceil($width/32) * 4 ) * $height;
+    $opacity_mask_size = (ceil($width / 32) * 4) * $height;
 
-    $data = pack('VVVvvVVVVVV', 40, $width, ( $height * 2 ), 1, 32, 0, 0, 0, 0, 0, 0);
+    $data = pack('VVVvvVVVVVV', 40, $width, ($height * 2), 1, 32, 0, 0, 0, 0, 0, 0);
 
-    foreach($pixel_data as $color){
-      $data .= pack( 'V', $color );
+    foreach ($pixel_data as $color) {
+      $data .= pack('V', $color);
     }
-    
-    foreach($opacity_data as $opacity){
+
+    foreach ($opacity_data as $opacity) {
       $data .= pack('N', $opacity);
     }
-    
+
     $image = [
       'width'                => $width,
       'height'               => $height,
@@ -267,7 +269,7 @@ class Ico
       'size'                 => $image_header_size + $color_mask_size + $opacity_mask_size,
       'data'                 => $data,
     ];
-    
+
     $this->images[] = $image;
   }
 
@@ -280,20 +282,20 @@ class Ico
   protected function load_image_file($file)
   {
     // Run a cheap check to verify that it is an image file.
-    if ( false === ($size=getimagesize($file)) ){
+    if (false === ($size = getimagesize($file))) {
       return false;
     }
 
-    if ( false === ($file_data=file_get_contents($file)) ){
+    if (false === ($file_data = file_get_contents($file))) {
       return false;
     }
-    
-    if ( false === ($im=imagecreatefromstring($file_data)) ){
+
+    if (false === ($im = imagecreatefromstring($file_data))) {
       return false;
     }
 
     unset($file_data);
-    
+
     return $im;
   }
 }
