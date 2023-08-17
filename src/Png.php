@@ -1,10 +1,12 @@
 <?php
+
 /**
  * (c) Joffrey Demetz <joffrey.demetz@gmail.com>
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
+
 namespace JDZ\Favicon;
 
 use Exception;
@@ -14,7 +16,7 @@ use Exception;
  * 
  * @author Joffrey Demetz <joffrey.demetz@gmail.com>
  */
-class Png 
+class Png
 {
   /**
    * Flag to tell if the required functions exist.
@@ -22,7 +24,7 @@ class Png
    * @var boolean
    */
   protected $valid;
-  
+
   /**
    * The source file
    * 
@@ -37,7 +39,7 @@ class Png
    */
   protected $image;
 
-  
+
   /**
    * Check the dependencies
    * 
@@ -62,14 +64,14 @@ class Png
       'imagefill',
       'imagecolorallocatealpha',
     ];
-    
-    foreach($required_functions as $function){
-      if ( !function_exists($function) ){
+
+    foreach ($required_functions as $function) {
+      if (!function_exists($function)) {
         throw new Exception('$function function does not exist, which is part of the GD library.');
       }
     }
   }
-  
+
   /**
    * Constructor 
    * 
@@ -80,23 +82,21 @@ class Png
   {
     $this->source = $source;
     $this->valid  = false;
-    
+
     $this->valid  = true;
-    
+
     $image_info = getimagesize($this->source);
     $type = $image_info[2];
-    
-    if ( $type === IMAGETYPE_JPEG ){
+
+    if ($type === IMAGETYPE_JPEG) {
       $this->image = imagecreatefromjpeg($this->source);
-    } 
-    elseif( $type === IMAGETYPE_GIF ){
+    } elseif ($type === IMAGETYPE_GIF) {
       $this->image = imagecreatefromgif($this->source);
-    } 
-    elseif( $type === IMAGETYPE_PNG ){
+    } elseif ($type === IMAGETYPE_PNG) {
       $this->image = imagecreatefrompng($this->source);
     }
   }
-  
+
   /**
    * Resize image to square
    *
@@ -106,15 +106,15 @@ class Png
    */
   public function square($file, $size)
   {
-    if ( $this->valid === false ){
+    if ($this->valid === false) {
       return false;
     }
-    
+
     $this->scale($size, $size);
     imagepng($this->image, $file);
     return true;
   }
-  
+
   /**
    * Create a ms tile
    *
@@ -124,54 +124,82 @@ class Png
    * @param   int       $height         The tile height
    * @return  boolean
    */
-  public function tile($file, $background, $width, $height)
+  public function tile($file, $background, $width, $height, $padding)
   {
-    if ( $this->valid === false ){
+    if ($this->valid === false) {
       return false;
     }
-    
-    if ( substr($background, 0, 1) === '#' ){
-      $background = substr($background, 1);
+
+    // Create an image with the specified width and height
+    $background_image = imagecreatetruecolor($width, $height);
+
+    // Convert the background color from hexadecimal to RGB
+    $background_color = $this->hexToRGB($background);
+
+    // Allocate the background color on the image
+    $background_color = imagecolorallocate($background_image, $background_color['r'], $background_color['g'], $background_color['b']);
+
+    // Fill the image with the background color
+    imagefill($background_image, 0, 0, $background_color);
+
+    // Get the user image resource
+    $user_image = $this->image;
+    $user_width = imagesx($user_image);
+    $user_height = imagesy($user_image);
+
+    // Calculate the aspect ratio of the user image
+    $user_aspect_ratio = $user_width / $user_height;
+
+    // Calculate the aspect ratio of the desired tile
+    $tile_aspect_ratio = $width / $height;
+
+    // Calculate the new width and height of the user image to fit within the tile with padding
+    if ($user_aspect_ratio > $tile_aspect_ratio) {
+      $new_user_width = $width - 2 * $padding;
+      $new_user_height = $new_user_width / $user_aspect_ratio;
+    } else {
+      $new_user_height = $height - 2 * $padding;
+      $new_user_width = $new_user_height * $user_aspect_ratio;
     }
-    
-    // background
-    $int = hexdec($background);
-    $r = 0xFF & ($int >> 0x10);
-    $v = 0xFF & ($int >> 0x8);
-    $b = 0xFF & $int;
-    // $r = 255;
-    // $v = 255;
-    // $b = 255;
-    
-    $blankbox = imagecreatetruecolor($width, $height);
-    imagealphablending($blankbox, true);
-    $background = imagecolorallocatealpha($blankbox, $r, $v, $b, 127);
-    imagefill($blankbox, 0, 0, $background);
-    imagealphablending($blankbox, false);
-    imagesavealpha($blankbox, true);
-    
-    $size = min($width, $height);
-    
-    $innerWidth  = $size * 0.8;
-    $innerHeight = $size * 0.8;
-    
-    // inner image
-    $this->scale($innerWidth, $innerHeight);
-    $inner = $this->image;
-    imagealphablending($inner, true);
-    imagesavealpha($inner, true);
-    
-    // calculate padding
-    $x = floor(( $width - $innerWidth ) / 2);
-    $y = floor(( $height - $innerHeight ) / 2);
-    
-    // buid & save
-    imagecopyresampled($blankbox, $inner, $x, $y, 0, 0, $width, $height, $width, $height);
-    imagepng($blankbox, $file);
-    
+
+    // Calculate the padding to center the user image on the background image with padding
+    $x = floor(($width - $new_user_width) / 2);
+    $y = floor(($height - $new_user_height) / 2);
+
+    // Copy the user image onto the background image with the new size and padding
+    imagecopyresampled($background_image, $user_image, $x, $y, 0, 0, $new_user_width, $new_user_height, $user_width, $user_height);
+
+    // Save the final MS tile
+    imagepng($background_image, $file);
+
+    // Free the memory used by the images
+    imagedestroy($background_image);
+
     return true;
   }
-  
+
+
+  // Helper function to convert a hexadecimal color to RGB
+  private function hexToRGB($hex)
+  {
+    $hex = ltrim($hex, '#');
+    if (strlen($hex) === 3) {
+      list($r, $g, $b) = sscanf($hex, "%1s%1s%1s");
+      $r = hexdec("$r$r");
+      $g = hexdec("$g$g");
+      $b = hexdec("$b$b");
+    } elseif (strlen($hex) === 6) {
+      list($r, $g, $b) = sscanf($hex, "%2s%2s%2s");
+      $r = hexdec($r);
+      $g = hexdec($g);
+      $b = hexdec($b);
+    } else {
+      throw new Exception("Invalid hex color format");
+    }
+
+    return ['r' => $r, 'g' => $g, 'b' => $b];
+  }
+
   /**
    * Scale image
    *
@@ -180,25 +208,23 @@ class Png
    * @return  void
    */
   protected function scale($width, $height)
-  { 
+  {
     $w = $this->getWidth();
     $h = $this->getHeight();
-    
-    if ( $w > $h ){
+
+    if ($w > $h) {
       $ratio = $width / $w;
       $h = $h * $ratio;
       $this->resize($width, $h);
-    }
-    elseif ( $w < $h ){
+    } elseif ($w < $h) {
       $ratio = $height / $h;
       $w = $w * $ratio;
       $this->resize($w, $height);
-    }
-    else {
+    } else {
       $this->resize($width, $height);
     }
-  }  
-  
+  }
+
   /**
    * Resize image
    *
@@ -212,16 +238,16 @@ class Png
   {
     imagesavealpha($this->image, true);
     $im = imagecreatetruecolor($width, $height);
-    
+
     $background = imagecolorallocatealpha($im, 255, 255, 255, 127);
     imagecolortransparent($im, $background);
     imagealphablending($im, false);
     imagesavealpha($im, true);
-    
+
     imagecopyresampled($im, $this->image, 0, 0, 0, 0, $width, $height, $this->getWidth(), $this->getHeight());
     $this->image = $im;
   }
-  
+
   /**
    * Get the image resource width
    *
@@ -231,7 +257,7 @@ class Png
   {
     return imagesx($this->image);
   }
-  
+
   /**
    * Get the image resource height
    *
